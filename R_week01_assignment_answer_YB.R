@@ -7,6 +7,7 @@ print(rs)
 seq(20,50,5)
 
 #3. Show how to take a trio of input numbers a, b, and c and implement the quadratic equation.
+# this function returns the roots for quadratic equation
 getQRoot<-function(a,b,c){
   a=as.complex(a)
   b=as.complex(b)
@@ -25,3 +26,4 @@ getQRoot<-function(a,b,c){
   }
     return(union((-b+sqrt(b^2-4*a*c))/(2*a), (-b-sqrt(b^2-4*a*c))/(2*a)))
 }
+
