@@ -1,0 +1,91 @@
+---
+title: "R week02 assignment report"
+author: "Yu Bai"
+date: "July 10, 2015"
+output: html_document
+---
+
+### Week2 Assignment:  
+Write a function to compute the number of combinations when choosing a given number of samples out of a given total number of samples.
+
+### Solution:
+Below the _my.choose()_ function calcualtes the number of possible combinations of choosing _nsample_ out of a _ntotal_ samples.
+This function handles only integer inputs. Non-integer inputs may be delt with using Gamma function but it is out of the scope of this exercise.
+
+<span style="color:red">Special note: _gmp_ package is used to handle big numbers to extend the applicable domain of the function.</span>
+
+```{r, collapse=TRUE}
+my.choose <- function(nsample, ntotal) {
+  
+  # make sure inputs are non-negative
+  if(ntotal < 0) {print("ERROR: ntotal cannot be negative"); return(NA) }
+  if(nsample < 0) {print("ERROR: nsample cannot be negative"); return(NA)}
+  
+  ntotal.int <- round(ntotal,0)
+  nsample.int <- round(nsample,0)
+  if((ntotal - ntotal.int) != 0) {
+    print(paste("WARNING: ntotal (",ntotal,") has non-integer value, rounded to ", ntotal.int, sep=""))
+    ntotal <- ntotal.int
+    rm(ntotal.int)
+  }
+  if((nsample - nsample.int) != 0) {
+    print(paste("WARNING: nsample (",nsample,") has non-integer value, rounded to ", nsample.int, sep=""))
+    nsample <- nsample.int
+    rm(nsample.int)
+  }
+  
+  # An internal function to compute factorials. Note this function can be written outside 
+  # my.choose() for better code reuse. But here keeping it inside to have a stand-alone my.choose().
+  my.factorial <- function(num, useBig=F){
+    # When my.factorial() is called, only integer inputs will be provided. so we can skip some sanity checks
+    if(num < 0) stop(print("ERROR: Cannot calculate factorial for negative numbers")) 
+    if(num == 0) return(1)
+    if(useBig){
+      out <- Reduce(`*`, 1:num, init=as.bigz(1))
+    }else{
+      out <- Reduce(`*`, 1:num, init=1)
+    }
+    return(out)
+  }
+    
+  if(nsample == 0) return(1)  # return 1 if nsample is 0 regardless of ntotal,otherwise continue 
+  if(ntotal < nsample) return(0)
+  # my.factorial() overflows when input >170, need use bigz to preserve the values     
+  if(ntotal > 170) {
+    result <- asNumeric(my.factorial(ntotal, useBig=T) / 
+                          (my.factorial(ntotal-nsample, useBig=T) * my.factorial(nsample, useBig=T)))
+  }else{
+    result <- my.factorial(ntotal) / (my.factorial(ntotal-nsample) * my.factorial(nsample))
+  }
+  
+  return(result)
+}
+```
+
+###Test cases:
+
+```{r,collapse=TRUE}
+library(gmp)
+
+my.choose(nsample=0, ntotal=0)
+
+my.choose(nsample=0, ntotal=1)
+
+my.choose(nsample=1, ntotal=0)
+
+my.choose(nsample=-1, ntotal=2)
+
+my.choose(nsample=2, ntotal=-2)
+
+my.choose(nsample=3.2, ntotal=5.5)
+
+my.choose(nsample=5, ntotal=2)
+
+my.choose(nsample=10, ntotal=100)
+
+my.choose(nsample=80, ntotal=170)
+
+my.choose(nsample=501, ntotal=1000)
+
+```
+
