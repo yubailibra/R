@@ -1,0 +1,77 @@
+---
+title: "R.week3.assignment.report"
+author: "Yu Bai"
+date: "July 16, 2015"
+output: html_document
+---
+
+###Week3 task: read in mushroom dataset (remotely), store into a data frame, subset and translate column names and contents 
+
+####1. Read in dataset
+```{r,warning=FALSE,message=FALSE,collapse=TRUE}
+library(RCurl)
+
+mushroom <- read.csv(text=getURL("https://raw.githubusercontent.com/yubailibra/cuny_R/master/agaricus-lepiota.data",.opts=curlOptions(followlocation = TRUE)), header=F, row.names=NULL)
+
+dim(mushroom) #confirm data readin has expected dimensions
+
+head(mushroom, n=3)
+```
+
+####2. Read in and parse attribute information
+```{r, warning=FALSE,message=FALSE,collapse=TRUE}
+library(stringr)
+# read in the agaricus-lepiota.names file
+annotsFile <- getURL("https://raw.githubusercontent.com/yubailibra/cuny_R/master/agaricus-lepiota.names",.opts=curlOptions(followlocation = TRUE))
+annotsFile <- readLines(tc <- textConnection(annotsFile))
+
+# locate the attribute annotations
+lstart <- grep("^7\\.\\s+Attribute Information:", annotsFile)+1
+lend <- grep("^8\\.\\s+Missing Attribute", annotsFile)-1
+
+# a simple function to turn an input str into a lookup table for abbreviations
+decipher <- function(str){
+  if(!grepl(",", str)){return(NULL)}
+  str <- gsub("^,|,$", "", str) #clean up unnecessary comma deliminators
+  parts <- str_trim(unlist(str_split(str, ",")))
+  hash <- sapply(parts, function(x){rev(str_trim(str_split_fixed(x, "=", 2)))})
+  colnames(hash) <- hash[1,]
+  hash[2,]
+}
+
+#lookup table for column names
+annots <-list()
+annots$indx2name <- rep("", ncol(mushroom)); 
+names(annots$indx2name) <- 1:ncol(mushroom)
+#assign first col for mushroom classification
+annots$indx2name["1"] <- "class" 
+annots$class <- c(e="edible",p="poisonous") 
+#parse attribute info
+current <- "";
+for(l in lstart:lend){
+  if(grepl(":", annotsFile[l])){
+    parts1 <- str_trim(str_split_fixed(annotsFile[l],"\\.",2))
+    parts2 <- str_trim(str_split_fixed(parts1[2],":",2))
+    indx <- as.character(as.numeric(parts1[1])+1)  #col index = attribute index + 1
+    colname <- parts2[1]
+    annots$indx2name[indx] <- current <- colname
+    annots[[current]] <- decipher(parts2[2])
+  }else if(str_length(annotsFile[l])>0){
+    annots[[current]] <- c(annots[[current]], decipher(annotsFile[l]))
+  }
+}
+
+rm(annotsFile)
+```
+####3. Annotate mushroom data and subset
+```{r, warning=FALSE,message=FALSE,collapse=TRUE}
+names(mushroom) <- annots$indx2name[as.character(1:ncol(mushroom))]
+for(each in names(mushroom)){
+  levels(mushroom[[each]]) <- annots[[each]][levels(mushroom[[each]])]
+}
+
+mini_mushroom <- mushroom[seq(1,nrow(mushroom),500), c("class", "odor", "spore-print-color", "stalk-surface-below-ring", "stalk-color-above-ring", "habitat")] 
+
+head(mini_mushroom)
+```
+
